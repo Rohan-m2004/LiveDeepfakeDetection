@@ -184,6 +184,7 @@ class DeepfakeDetectionApp(tk.Tk):
         self._running = False
         self._capture_thread: Optional[threading.Thread] = None
         self._frame_queue: queue.Queue = queue.Queue(maxsize=self._QUEUE_MAXSIZE)
+        self._main_thread_queue: queue.Queue = queue.Queue()  # for cross-thread UI ops
         self._last_result: Optional[DetectionResult] = None
         self._alert_count = 0
 
@@ -390,6 +391,14 @@ class DeepfakeDetectionApp(tk.Tk):
 
     def _update_loop(self) -> None:
         """Poll the frame queue and update the GUI.  Reschedules itself."""
+        # Drain any pending cross-thread callables (from background threads).
+        try:
+            while True:
+                fn = self._main_thread_queue.get_nowait()
+                fn()
+        except queue.Empty:
+            pass
+
         try:
             frame = self._frame_queue.get_nowait()
             result = self._detector.process_frame(frame)
@@ -508,6 +517,10 @@ class DeepfakeDetectionApp(tk.Tk):
         self._status_var.set(f"Loading model: {os.path.basename(path)} …")
         self.update_idletasks()
 
+        def _schedule(fn):
+            """Queue a callable to run on the main thread."""
+            self._main_thread_queue.put(fn)
+
         def _do_load():
             try:
                 import tensorflow as tf
@@ -517,17 +530,17 @@ class DeepfakeDetectionApp(tk.Tk):
                 else:
                     model = tf.keras.models.load_model(path)
                 self._detector.model = model
-                self._status_var.set(
+                _schedule(lambda: self._status_var.set(
                     f"Model loaded: {os.path.basename(path)}"
-                )
-                self._append_log(
+                ))
+                _schedule(lambda: self._append_log(
                     f"[{datetime.now().strftime('%H:%M:%S')}] "
                     f"Model loaded: {os.path.basename(path)}\n",
                     tag="info",
-                )
+                ))
             except Exception as exc:
-                self._status_var.set(f"Model load failed: {exc}")
-                messagebox.showerror("Model Load Error", str(exc))
+                _schedule(lambda: self._status_var.set(f"Model load failed: {exc}"))
+                _schedule(lambda: messagebox.showerror("Model Load Error", str(exc)))
 
         threading.Thread(target=_do_load, daemon=True).start()
 

@@ -3,7 +3,12 @@ Entry point for the LiveDeepfakeDetection application.
 
 Usage::
 
-    # Launch GUI (no model pre-loaded)
+    # ── Quick demo (no datasets needed) ──────────────────────────────────
+    # Automatically creates a randomly initialised model and opens the GUI.
+    python main.py --demo
+
+    # ── GUI ──────────────────────────────────────────────────────────────
+    # Launch GUI (no model pre-loaded — shows 50/50 uncertainty)
     python main.py
 
     # Launch GUI with a pre-trained model
@@ -12,10 +17,15 @@ Usage::
     # Launch GUI with a TFLite model (edge deployment)
     python main.py --model models/deepfake_detector.tflite
 
-    # Train a new model
+    # ── Training ─────────────────────────────────────────────────────────
+    # Train a new model on real data
     python main.py --train --data data/
 
-    # Headless inference on a video file
+    # End-to-end pipeline smoke-test using synthetic data
+    python scripts/generate_synthetic_data.py
+    python main.py --train --data demo_data/ --epochs 5
+
+    # ── Headless inference ────────────────────────────────────────────────
     python main.py --video path/to/video.mp4 --model models/deepfake_detector.keras
 """
 
@@ -42,6 +52,15 @@ def _parse_args() -> argparse.Namespace:
         "--model", "-m",
         metavar="PATH",
         help="Path to a saved Keras (.keras / .h5) or TFLite (.tflite) model.",
+    )
+    parser.add_argument(
+        "--demo",
+        action="store_true",
+        help=(
+            "Quick-start demo mode: automatically create a randomly initialised "
+            "model (models/demo_model.keras) if one does not already exist, then "
+            "launch the GUI with that model.  No training data required."
+        ),
     )
     parser.add_argument(
         "--train",
@@ -82,6 +101,25 @@ def _parse_args() -> argparse.Namespace:
         help="Suppress the GUI even when not training (useful in CI).",
     )
     return parser.parse_args()
+
+
+# ---------------------------------------------------------------------------
+# Demo mode
+# ---------------------------------------------------------------------------
+
+def _run_demo() -> None:
+    """Create a demo model (if needed) and launch the GUI with it."""
+    demo_path = os.path.join("models", "demo_model.keras")
+
+    if not os.path.isfile(demo_path):
+        print("Demo model not found — creating one now …")
+        from scripts.create_demo_model import create_demo_model
+        create_demo_model(demo_path)
+    else:
+        print(f"Using existing demo model: {demo_path}")
+
+    from gui.app import launch
+    launch(model_path=demo_path)
 
 
 # ---------------------------------------------------------------------------
@@ -161,6 +199,10 @@ def _run_video_inference(args: argparse.Namespace) -> None:
 
 def main() -> None:
     args = _parse_args()
+
+    if args.demo:
+        _run_demo()
+        return
 
     if args.train:
         _run_training(args)

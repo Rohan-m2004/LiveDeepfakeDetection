@@ -47,7 +47,9 @@ Thumbs.db
 
 # Test outputs and generated assets
 gui_screenshot.png
+gui_demo_screenshot.png
 *.xwd
+demo_data/
 
 
 .coverage

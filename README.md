@@ -64,6 +64,9 @@ DepthwiseConv2D(3×3) → BatchNorm(momentum=0.99) → ReLU
 
 ```
 LiveDeepfakeDetection/
+├── scripts/
+│   ├── create_demo_model.py        # Build & save a random-weight model for GUI demo
+│   └── generate_synthetic_data.py  # Create tiny synthetic dataset for pipeline smoke-test
 ├── src/
 │   ├── model/
 │   │   └── lightweight_cnn.py      # CNN architecture + TFLite export
@@ -104,7 +107,42 @@ pip install -r requirements.txt
 
 ## Quick Start
 
-### 1. Launch the GUI (demo mode — no model required)
+### 0 · Instant demo — no training data required
+
+The fastest way to see the full system in action:
+
+```bash
+python main.py --demo
+```
+
+This single command:
+1. Builds a freshly initialised model (`models/demo_model.keras`) if one does not already exist.
+2. Opens the GUI with that model pre-loaded.
+3. Click **▶ Start Camera** — face detection, overlays, confidence bars, and the temporal alert system all run immediately.
+
+> **Note:** A randomly initialised model produces random confidence scores.  
+> The purpose of `--demo` is to verify the complete pipeline (camera → face detection → preprocessing → model → GUI overlays → alert log) is wired correctly before you invest time in training.
+
+---
+
+### 1 · End-to-end pipeline smoke-test (no real datasets needed)
+
+```bash
+# Step 1: generate a tiny synthetic dataset (~2–5 minutes to create, <1 minute to train)
+python scripts/generate_synthetic_data.py
+
+# Step 2: train for just 5 epochs to confirm the full pipeline works
+python main.py --train --data demo_data/ --epochs 5 --output-dir models/
+
+# Step 3: open the GUI with the result
+python main.py --model models/deepfake_detector.keras
+```
+
+The synthetic data uses colour/texture differences (warm tones for REAL, red-magenta tint + grid artefacts for FAKE) that a CNN can learn in a handful of epochs.  Accuracy on real deepfake datasets requires proper training data (see Step 3 below).
+
+---
+
+### 2 · Launch the GUI (no model pre-loaded)
 
 ```bash
 python main.py
@@ -112,7 +150,7 @@ python main.py
 
 Click **▶ Start Camera** to open the webcam. The system will detect faces and display bounding boxes. Without a trained model, predictions are 50 % (uniform uncertainty).
 
-### 2. Load a pre-trained model
+### 3 · Load a pre-trained model
 
 ```bash
 python main.py --model models/deepfake_detector.keras
@@ -120,7 +158,7 @@ python main.py --model models/deepfake_detector.keras
 python main.py --model models/deepfake_detector.tflite
 ```
 
-### 3. Train a model
+### 4 · Train a model on real deepfake datasets
 
 Organise your dataset:
 
@@ -146,7 +184,7 @@ Recommended datasets (as used in the paper):
 python main.py --train --data data/ --output-dir models/ --epochs 100
 ```
 
-### 4. Headless inference on a video file
+### 5 · Headless inference on a video file
 
 ```bash
 python main.py --video path/to/meeting_recording.mp4 --model models/deepfake_detector.keras
