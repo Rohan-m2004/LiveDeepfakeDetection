@@ -1,0 +1,57 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+
+# Virtual environments
+venv/
+env/
+.venv/
+.env/
+
+# Model files (large binary assets)
+*.h5
+*.keras
+*.tflite
+*.pb
+models/
+
+# Dataset directories
+data/
+datasets/
+
+# Logs and checkpoints
+logs/
+checkpoints/
+runs/
+
+# Jupyter notebooks checkpoints
+.ipynb_checkpoints/
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test outputs and generated assets
+gui_screenshot.png
+gui_demo_screenshot.png
+*.xwd
+demo_data/
+
+
+.coverage
+htmlcov/
+.pytest_cache/
